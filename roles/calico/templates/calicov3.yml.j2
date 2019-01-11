@@ -202,6 +202,15 @@ spec:
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
       initContainers:
+{% if calico_use_application_layer_policy %}
+        - name: flexvol-driver
+          image: {{ calico_flexvol_image }}
+          volumeMounts:
+            - name: flexvol-driver-host
+              mountPath: /host/driver
+          securityContext:
+            privileged: true
+{% endif %}
         - name: migrate
           image: {{ calico_upgrade_image }}
           command: ['/bin/sh', '-c', '/node-init-container.sh']
@@ -264,6 +273,11 @@ spec:
         - name: calico-node
           image: {{ calico_node_image }}
           env:
+{% if calico_use_application_layer_policy %}
+            # Enable the Policy Sync API between Felix and Dikastes
+            - name: FELIX_POLICYSYNCPATHPREFIX
+              value: "/var/run/nodeagent"
+{% endif %}
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
@@ -363,6 +377,10 @@ spec:
 {% endif %}
             periodSeconds: 10
           volumeMounts:
+{% if calico_use_application_layer_policy %}
+            - name: policysync
+              mountPath: /var/run/nodeagent
+{% endif %}
             - mountPath: /lib/modules
               name: lib-modules
               readOnly: true
@@ -423,6 +441,18 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
       volumes:
+{% if calico_use_application_layer_policy %}
+        # Used to create per-pod Unix Domain Sockets
+        - name: policysync
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/run/nodeagent
+        # Used to install Flex Volume Driver
+        - name: flexvol-driver-host
+          hostPath:
+            type: DirectoryOrCreate
+            path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
+{% endif %}
         # Used by calico/node.
         - name: lib-modules
           hostPath:

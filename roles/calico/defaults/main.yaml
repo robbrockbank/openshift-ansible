@@ -8,3 +8,6 @@ calico_cni_image: "quay.io/calico/cni:v3.1.3"
 calico_upgrade_image: "quay.io/calico/upgrade:v1.0.5"
 calico_ipv4pool_ipip: "always"
 use_calico_etcd: False
+
+calico_use_application_layer_policy: False
+calico_flexvol_image: "quay.io/calico/pod2daemon-flexvol:v3.2.4"
